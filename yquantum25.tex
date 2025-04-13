@@ -1,0 +1,122 @@
+\documentclass[12pt]{article}         
+\usepackage{fullpage}
+\usepackage[shortlabels]{enumitem}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, urlcolor=blue, linkcolor=red]{hyperref}
+\usepackage{subcaption}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+%\usepackage{amsmath}
+%\usepackage{amssymb}
+%\usepackage{enumitem}
+
+\title{Twister Tuning: Optimizing Insurance Claim Handling To Minimize Costs}
+\author{Karl Kreuze, Kevin Chang, Gabriel Maravilla, Brian Choi, Nicholas Nguyen}
+
+\begin{document}
+\maketitle
+
+\section*{Abstract}
+This document presents the results of a quantum algorithm designed to optimize insurance claim Handling
+to minimize costs. A classification of tornado severities are collected and converted to a binary
+encoding and then input to a quadratic unconstrained binary optimization (QUBO) problem. 
+This conversion to a QUBO problem allows a quantum computer to efficiently solve the problem using
+a superposition of states to solve the problem without needing to exhaustively search through all possible
+solutions. With the increasing change in climate, the need for insurance companies to
+efficiently handle claims is becoming more important. Our derivations show that quantum computers
+will be very useful in the future for solving these types of problems.
+
+\section*{Derivation of Cost Function}
+We are given the following variables as given by a tornado severity classification:
+\begin{align*}
+    N_{ik} &= \text{$\#$ of tornadoes of severity $i$ in week $k$}\\
+    N_{i} &= \sum_{k=1}^{K} N_{ik} = \text{$\#$ of tornadoes of severity $i$}\\
+    M_{ij} &= \text{claims of severity $i$ servicable by skill $j$ per day}\\
+    W_{i} &= \text{weeks where 90$\%$ of claims must be serviced}
+\end{align*}
+\newpage 
+\noindent
+We are additionally given the following constraints:
+\begin{align*}
+    \sum_{k=1}^{W_i} \sum^{j} 7X_{ijk}M_{ij} &\geq \min(\sum_{k=1}^{W_i}N_{ik}, 0.9N_{i}), \quad \forall i\\
+    \sum_{k=1}^{4}\sum^{j} X_{ijk}M_{ij} &\geq N_{i}, \quad \forall i\\
+    X_{ijk} &\geq 0, \quad \forall i,j,k\\
+\end{align*}
+where $X_{ijk}$ is the number of workers servicing claim of severity $i$ serviced by skill $j$ in week $k$.
+
+The top constraint says that 90$\%$ of claims must be serviced in $W_i$ weeks.
+The second constraint says that all the claims must be serviced in 4 weeks.
+
+\subsection*{Designing the Quantum Register}
+In the given spreadsheet, we have a thousand claims total, so we figured that 40 bits in a register,
+with 8 bits for each level of severity, would be enough to represent the number of workers servicing claims of severity $i$.
+Thus, we will put a 40 bit superposition state into the QUBO circuit.
+If we get an output of \texttt{0b100000001}, we may split up the bits into 5 groups of 8 bits, and
+convert each block into the corresponding skill level's number of workers. In this example,
+we would have one worker of skill level 1, and 1 worker of skill level 2.
+
+\subsection*{Sum of Workers}
+Our cost function will start with the sum of workers of various skill levels.
+\begin{align*}
+    J(x)_{x \in \{0,1\}^{40}} &= \sum_{n=1}^{N} X_{n}\\
+\end{align*}
+Next, we'll add penalties corresponding to the constraints.
+\begin{align*}
+    J(x)_{x \in \{0,1\}^{40}} &= \sum_{n=1}^{N} X_{n} +
+    \lambda_0\left(\sum^{j}\sum^{i}\left(X_{j}M_{ij} - N_{i}\right)\right)^2 + \lambda_1\left(\sum^{j} \text{relu}(-X_{j})\right)^2\\
+\end{align*}
+\newpage
+\noindent
+The first penalty grows whenever we are not servicing all the claims.
+The second penalty grows whenever we have negative values in the register.
+The relu function is defined as:
+\begin{align*}
+    \text{relu}(x) &= \begin{cases}
+        0 & x < 0\\
+        x & x \geq 0
+    \end{cases}
+\end{align*}
+We'll make the penalty values very large, so that the cost function will be minimized when the constraints are satisfied.
+\section*{Testing}
+Unfortunately, we were unable to test the QUBO circuit because of the release of Qisket 2 causing
+dependency issues with Nexus Labs
+\section*{Additional constraints}
+We'd need to match workers to weeks to work, and match them to the claims they are servicing.
+This new cost function would include our given constraint above about servicing 90$\%$ of claims in $W_i$ weeks.
+\section*{Future Work}
+Additional constraints such as commute time, geography, and virtual versus in-person work would
+need their own cost functions to be evaluated. For example, a penalty could be added for a virtual
+worker servicing an in-person claim, and this could be represented by a function that checks the
+skill of the worker and compares it to the severity of the claim, and adds a penalty based on the given table.
+
+
+\end{document}
